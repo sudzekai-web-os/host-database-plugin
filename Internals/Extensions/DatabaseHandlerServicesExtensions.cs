@@ -5,6 +5,7 @@ using Sudzekai.LinCtrl.Core;
 using System.Globalization;
 using System.Net;
 using System.Text.Json;
+using System.Text.Json.Schema;
 using System.Text.Json.Serialization.Metadata;
 
 namespace DatabasePlugin
@@ -41,13 +42,9 @@ namespace DatabasePlugin
                 "Обновляет другого пользователя. Тело JSON содержит username и roleId. Пропущенные password и isBlocked сохраняют текущие значения. Доступно администратору.",
                 (dispatcher, request, caller) => dispatcher.Dispatch(new UpdateUser(GetId(request), ReadBody(request, DatabaseJsonContext.Default.UserInput)), caller), 404, 409);
 
-            Add(services, HttpRequestMethod.Delete, "users/{id:long}", "Удаление пользователя",
+            AddEmpty(services, HttpRequestMethod.Delete, "users/{id:long}", "Удаление пользователя",
                 "Удаляет другого пользователя без связанных записей истории. Доступно администратору.",
-                (dispatcher, request, caller) =>
-                {
-                    dispatcher.Dispatch(new DeleteUser(GetId(request)), caller);
-                    return null;
-                }, 404, 409);
+                (dispatcher, request, caller) => dispatcher.Dispatch(new DeleteUser(GetId(request)), caller), 404, 409);
 
             Add(services, HttpRequestMethod.Get, "history", "Список записей истории",
                 "Возвращает историю изменений от новых записей к старым. Поддерживает параметры limit и offset.",
@@ -61,25 +58,35 @@ namespace DatabasePlugin
                 "Создаёт запись истории. Тело JSON содержит userId, action, summary и необязательное dateTime. Доступно администратору.",
                 (dispatcher, request, _) => dispatcher.Dispatch(new CreateHistoryEntry(ReadBody(request, DatabaseJsonContext.Default.HistoryInput))), 409);
 
-            Add(services, HttpRequestMethod.Put, "history/{id:long}", "Обновление записи истории",
+            AddEmpty(services, HttpRequestMethod.Put, "history/{id:long}", "Обновление записи истории",
                 "Обновляет запись истории. Тело JSON содержит userId, action и summary. Пропущенное dateTime сохраняет текущее значение. Доступно администратору.",
-                (dispatcher, request, _) =>
-                {
-                    dispatcher.Dispatch(new UpdateHistoryEntry(GetId(request), ReadBody(request, DatabaseJsonContext.Default.HistoryInput)));
-                    return null;
-                }, 404, 409);
+                (dispatcher, request, _) => dispatcher.Dispatch(new UpdateHistoryEntry(GetId(request), ReadBody(request, DatabaseJsonContext.Default.HistoryInput))), 404, 409);
 
-            Add(services, HttpRequestMethod.Delete, "history/{id:long}", "Удаление записи истории",
+            AddEmpty(services, HttpRequestMethod.Delete, "history/{id:long}", "Удаление записи истории",
                 "Удаляет запись истории по идентификатору. Доступно администратору.",
-                (dispatcher, request, _) =>
-                {
-                    dispatcher.Dispatch(new DeleteHistoryEntry(GetId(request)));
-                    return null;
-                }, 404);
+                (dispatcher, request, _) => dispatcher.Dispatch(new DeleteHistoryEntry(GetId(request))), 404);
         }
 
+        private static void Add<TResult>(IServiceCollection services, HttpRequestMethod method, string pattern,
+            string summary, string description, Func<DatabaseDispatcher, HttpRequestDto, long, TResult> execute, params int[] extraStatuses)
+        {
+            var schema = DatabaseJsonContext.Default.Options.GetJsonSchemaAsNode(typeof(TResult),
+                new JsonSchemaExporterOptions { TreatNullObliviousAsNonNullable = true });
+            Add(services, method, pattern, summary, description, schema.ToJsonString(),
+                (dispatcher, request, caller) => execute(dispatcher, request, caller), extraStatuses);
+        }
+
+        private static void AddEmpty(IServiceCollection services, HttpRequestMethod method, string pattern,
+            string summary, string description, Action<DatabaseDispatcher, HttpRequestDto, long> execute, params int[] extraStatuses)
+            => Add(services, method, pattern, summary, description, """{"type":"null"}""", (dispatcher, request, caller) =>
+            {
+                execute(dispatcher, request, caller);
+                return null;
+            }, extraStatuses);
+
         private static void Add(IServiceCollection services, HttpRequestMethod method, string pattern,
-            string summary, string description, Func<DatabaseDispatcher, HttpRequestDto, long, object?> execute, params int[] extraStatuses)
+            string summary, string description, string responseDataSchema,
+            Func<DatabaseDispatcher, HttpRequestDto, long, object?> execute, int[] extraStatuses)
         {
             var statusCode = method == HttpRequestMethod.Post ? 201 : 200;
             var acceptsBody = method is HttpRequestMethod.Post or HttpRequestMethod.Put;
@@ -88,7 +95,7 @@ namespace DatabasePlugin
                 ? new[] { "limit", "offset" }
                 : null;
             var metadata = new RequestHandlerMetadata(method, $"database/{pattern}", summary, description, statuses,
-                acceptsBody, queryParameters);
+                acceptsBody, queryParameters, Group: "database", ResponseDataSchema: responseDataSchema);
             services.AddTransient<IRequestHandler>(provider => new DatabaseRequestHandler(
                 provider.GetRequiredService<DatabaseDispatcher>(), metadata, method != HttpRequestMethod.Get, execute));
         }

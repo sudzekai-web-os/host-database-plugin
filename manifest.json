@@ -1,6 +1,6 @@
 {
   "name": "Database",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "summary": "Пользователи, роли и история изменений",
   "assemblies": ["DatabasePlugin.dll"]
 }

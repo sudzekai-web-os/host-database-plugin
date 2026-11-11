@@ -29,4 +29,4 @@ dotnet publish DatabasePlugin.csproj -c Release -r win-x64
 
 Для записи истории используются поля `userId`, `dateTime`, `action` и `summary`. Если `dateTime` пропущено, при создании используется текущее время UTC, при обновлении сохраняется время записи.
 
-Все обработчики включают `IsFiltering`. Строка версии приходит в `data`, например `{"success":true,"data":"0.1.0"}`.
+Все обработчики включают `IsFiltering`. Строка версии приходит в `data`, например `{"success":true,"data":"0.2.0"}`.

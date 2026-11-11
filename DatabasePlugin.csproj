@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <NativeLibrary>Shared</NativeLibrary>
+    <Version>0.1.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\bundle\Sudzekai.LinCtrl.Assembly\Sudzekai.LinCtrl.Assembly.csproj" />
+    <ProjectReference Include="..\bundle\Sudzekai.LinCtrl.Assembly.Generator\Sudzekai.LinCtrl.Assembly.Generator.csproj"
+                      OutputItemType="Analyzer"
+                      ReferenceOutputAssembly="false" />
+    <ProjectReference Include="..\bundle\Sudzekai.LinCtrl.Hosting\Sudzekai.LinCtrl.Hosting.csproj" />
+    <TrimmerRootAssembly Include="MySql.Data" />
+    <TrimmerRootAssembly Include="System.Configuration.ConfigurationManager" />
+    <None Update="manifest.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

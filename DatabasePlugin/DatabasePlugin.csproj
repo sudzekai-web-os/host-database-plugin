@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PublishAot>true</PublishAot>
+    <NativeLibrary>Shared</NativeLibrary>
+    <Version>0.2.3</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Application\Application.csproj" />
+    <PackageReference Include="Sudzekai.LinCtrl.Assembly" Version="0.5.0" />
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <TrimmerRootAssembly Include="MySql.Data" />
+    <TrimmerRootAssembly Include="System.Configuration.ConfigurationManager" />
+    <None Update="manifest.json" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <Target Name="SetLinuxManifestAssembly" AfterTargets="Publish" Condition="$([System.String]::Copy('$(RuntimeIdentifier)').StartsWith('linux-'))">
+    <ReadLinesFromFile File="$(PublishDir)manifest.json">
+      <Output TaskParameter="Lines" ItemName="_ManifestLines" />
+    </ReadLinesFromFile>
+    <WriteLinesToFile File="$(PublishDir)manifest.json"
+                      Lines="@(_ManifestLines->Replace('DatabasePlugin.dll','DatabasePlugin.so'))"
+                      Overwrite="true" Encoding="UTF-8" />
+  </Target>
+
+</Project>
